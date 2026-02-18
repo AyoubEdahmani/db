@@ -605,45 +605,66 @@ DROP ROLE rl_admin_secu;
 
 ## **10. Les Profils (Profiles)**
 
-### **A. Concept des Profils**
-- Pour contrôler la consommation des ressources et les mots de passe
-- Profil par défaut : DEFAULT
-- Limites de DEFAULT : UNLIMITED
 
-### **B. Activation du Contrôle des Ressources**
+---
+
+# 🔹 Qu’est-ce qu’un **Profile** ?
+
+Un **Profile** dans **Oracle Database** est un **ensemble de restrictions appliquées aux comptes utilisateurs**, par exemple :
+
+* Durée de vie du mot de passe
+* Nombre de tentatives de connexion échouées
+* Ressources autorisées (CPU, sessions, etc.)
+
+**Objectif :** sécuriser les comptes et contrôler les ressources utilisées par chaque utilisateur.
+
+---
+
+# 🔹 Création d’un Profile
+
+Exemple pratique :
+
 ```sql
--- Dans le fichier initSID.ora
-RESOURCE_LIMIT = TRUE
-
--- Dynamiquement
-ALTER SYSTEM SET resource_limit = true;
+CREATE PROFILE etudiants_profile
+LIMIT 
+  FAILED_LOGIN_ATTEMPTS 5        -- nombre de tentatives échouées avant verrouillage
+  PASSWORD_LIFE_TIME 90          -- durée de validité du mot de passe (en jours)
+  PASSWORD_REUSE_TIME 180        -- délai minimum avant de réutiliser un ancien mot de passe
+  PASSWORD_REUSE_MAX 5           -- nombre maximum de réutilisations autorisées
+  PASSWORD_LOCK_TIME 1;           -- durée du verrouillage du compte (en jours)
 ```
 
-### **C. Création d'un Profil**
+---
 
-#### **1. Définition des Limites de Ressources**
+# 🔹 Explication des paramètres
+
+* `FAILED_LOGIN_ATTEMPTS` → verrouille le compte si l’utilisateur échoue trop de fois
+* `PASSWORD_LIFE_TIME` → durée avant que le mot de passe doive être changé
+* `PASSWORD_REUSE_TIME` → interdit de réutiliser un ancien mot de passe avant ce délai
+* `PASSWORD_REUSE_MAX` → limite le nombre de réutilisations d’un mot de passe
+* `PASSWORD_LOCK_TIME` → durée du verrouillage après trop de tentatives échouées
+
+---
+
+# 🔹 Associer un Profile à un utilisateur
+
+Après création, il faut l’appliquer à un utilisateur :
+
 ```sql
-CREATE PROFILE pf_secretaire LIMIT
-SESSIONS_PER_USER 2
-CPU_PER_SESSION UNLIMITED
-CPU_PER_CALL 1000
-LOGICAL_READS_PER_SESSION UNLIMITED
-LOGICAL_READS_PER_CALL 100
-IDLE_TIME 30
-CONNECT_TIME 480;
+ALTER USER ali PROFILE etudiants_profile;
 ```
 
-#### **2. Définition des Limites de Mots de Passe**
-```sql
-CREATE PROFILE pf_admin LIMIT
-PASSWORD_LIFE_TIME 200
-PASSWORD_REUSE_MAX DEFAULT
-PASSWORD_REUSE_TIME UNLIMITED
-FAILED_LOGIN_ATTEMPTS 5
-PASSWORD_LOCK_TIME 1
-PASSWORD_GRACE_TIME 7
-CPU_PER_SESSION UNLIMITED;
-```
+➡️ Maintenant, l’utilisateur `ali` sera soumis aux règles définies dans le profile.
+
+---
+
+✅ **Résumé simple à retenir :**
+
+* **Profile = ensemble de règles pour un compte**
+* Sert à **protéger les comptes** et **gérer les ressources**
+* Création : `CREATE PROFILE` → application : `ALTER USER … PROFILE`
+
+---
 
 #### **3. Exemple Complet**
 ```sql
