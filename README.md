@@ -339,154 +339,359 @@ SELECT * FROM V$SGA;
 
 ---
 
-## **8. Gestion des Utilisateurs**
+## **7. Création et Gestion des Utilisateurs**
 
-### **Définition :** Un utilisateur dans Oracle est un compte qui peut se connecter à la base de données et posséder des objets.
+### **A. Étapes de Création d'un Nouvel Utilisateur**
 
-### **Étapes de création d'un nouvel utilisateur :**
+#### **1. Choix du Nom d'Utilisateur**
+```sql
+CREATE USER ali ...;
+```
 
+#### **2. Choix de la Méthode d'Authentification**
+```sql
+-- Authentification par mot de passe
+CREATE USER ali IDENTIFIED BY password123;
+
+-- Authentification externe (par système d'exploitation)
+CREATE USER ops$ali IDENTIFIED EXTERNALLY;
+```
+
+#### **3. Définition des Tablespaces et Quotas**
 ```sql
 CREATE USER ali
 IDENTIFIED BY password123
 DEFAULT TABLESPACE users
 TEMPORARY TABLESPACE temp
-QUOTA 100M ON users
+QUOTA 500M ON users
+QUOTA UNLIMITED ON data_app;
+```
+
+#### **4. Paramètres Supplémentaires du Compte**
+```sql
+PASSWORD EXPIRE      -- Changement du mot de passe à la première connexion
+ACCOUNT UNLOCK       -- Compte non verrouillé
+ACCOUNT LOCK         -- Verrouillage du compte
+```
+
+### **B. Exemple Complet de Création d'Utilisateur**
+```sql
+CREATE USER ali
+IDENTIFIED BY monMotDePasse123
+DEFAULT TABLESPACE users
+TEMPORARY TABLESPACE temp
+QUOTA 500M ON users
+QUOTA UNLIMITED ON data_app
 PASSWORD EXPIRE
 ACCOUNT UNLOCK;
 ```
 
-### **Composants de la commande CREATE USER :**
-
-1. **IDENTIFIED BY :** Méthode d'authentification
-2. **DEFAULT TABLESPACE :** Emplacement de stockage des objets de l'utilisateur
-3. **TEMPORARY TABLESPACE :** Pour les fichiers temporaires
-4. **QUOTA :** Espace autorisé
-5. **PASSWORD EXPIRE :** Le mot de passe expire à la première connexion
-6. **ACCOUNT UNLOCK :** Compte non verrouillé
-
-### **Modification et suppression des utilisateurs :**
-
+### **C. Modification d'un Utilisateur Existant**
 ```sql
--- Changer le mot de passe
-ALTER USER ali IDENTIFIED BY newpassword;
+-- Changement du mot de passe
+ALTER USER ali IDENTIFIED BY newPassword;
 
--- Changer le quota
-ALTER USER ali QUOTA 200M ON users;
+-- Changement des Tablespaces
+ALTER USER scott 
+DEFAULT TABLESPACE tablespace2
+TEMPORARY TABLESPACE tmp_tablespace2;
 
--- Verrouiller le compte
+-- Changement des quotas
+ALTER USER ali
+QUOTA 15M ON tablespace1
+QUOTA 5M ON tablespace2;
+
+-- Verrouillage/Déverrouillage du compte
 ALTER USER ali ACCOUNT LOCK;
+ALTER USER ali ACCOUNT UNLOCK;
+```
 
--- Supprimer l'utilisateur
-DROP USER ali CASCADE; -- avec tous ses objets
+### **D. Suppression d'Utilisateur**
+```sql
+-- Suppression d'un utilisateur avec schéma vide
+DROP USER test;
+
+-- Suppression d'un utilisateur avec tous ses objets
+DROP USER test CASCADE;
+```
+
+### **E. Requêtes d'Information sur les Utilisateurs**
+```sql
+-- Afficher les informations des utilisateurs
+SELECT * FROM DBA_USERS;
+SELECT * FROM DBA_TS_QUOTAS;
+
+-- Afficher les informations d'un utilisateur spécifique
+SELECT * FROM DBA_USERS WHERE username = 'ALI';
+SELECT tablespace_name, bytes, max_bytes 
+FROM DBA_TS_QUOTAS 
+WHERE username = 'ALI';
 ```
 
 ---
 
-## **9. Gestion des Privilèges**
+## **8. Gestion des Privilèges (Privileges)**
 
-### **Définition :** Un privilège est le droit d'exécuter une action spécifique dans la base de données.
+### **A. Types de Privilèges**
 
-### **Types de privilèges :**
-
-#### **1. Privilèges système (System Privileges)**
+#### **1. Privilèges Système (System Privileges)**
 - Permettent d'exécuter des opérations au niveau système
-- Environ 127 privilèges système dans Oracle
+- Oracle contient environ 127 privilèges système
 
-**Exemples :**
+**Exemples de privilèges système :**
 ```sql
+-- Privilèges de session
 GRANT CREATE SESSION TO ali;      -- Permettre la connexion
-GRANT CREATE TABLE TO ali;        -- Permettre de créer des tables
-GRANT CREATE ANY TABLE TO ali;    -- Permettre de créer des tables dans n'importe quel schéma
+GRANT ALTER SESSION TO ali;       -- Permettre la modification de session
+
+-- Privilèges sur les tables
+GRANT CREATE TABLE TO ali;        -- Créer des tables dans son schéma
+GRANT CREATE ANY TABLE TO ali;    -- Créer des tables dans n'importe quel schéma
+GRANT ALTER ANY TABLE TO ali;     -- Modifier n'importe quelle table
+GRANT DROP ANY TABLE TO ali;      -- Supprimer n'importe quelle table
+GRANT SELECT ANY TABLE TO ali;    -- Interroger n'importe quelle table
+
+-- Privilèges sur les Tablespaces
+GRANT CREATE TABLESPACE TO ali;
+GRANT ALTER TABLESPACE TO ali;
+GRANT DROP TABLESPACE TO ali;
+GRANT UNLIMITED TABLESPACE TO ali;
 ```
 
-#### **2. Privilèges objet (Object Privileges)**
+#### **2. Privilèges Objet (Object Privileges)**
 - Permettent d'accéder à des objets spécifiques
 
-**Privilèges sur les tables :**
-- SELECT, INSERT, UPDATE, DELETE, ALTER, INDEX, REFERENCES
+**Privilèges disponibles sur les tables :**
+- ALTER : Modifier la définition de la table
+- DELETE : Supprimer des lignes
+- INSERT : Insérer des lignes
+- REFERENCES : Créer des contraintes d'intégrité
+- SELECT : Interroger
+- UPDATE : Mettre à jour
 
+### **B. Attribution des Privilèges**
+
+#### **1. Attribution des Privilèges Système**
 ```sql
--- Accorder des privilèges sur une table
-GRANT SELECT, INSERT ON employees TO ali;
+-- Syntaxe générale
+GRANT {system_priv | role} TO {user | role | PUBLIC} 
+[WITH ADMIN OPTION];
 
--- Accorder UPDATE sur des colonnes spécifiques
-GRANT UPDATE (salary, commission_pct) ON employees TO ali;
+-- Exemples
+GRANT CREATE SESSION TO ali;
+GRANT CREATE TABLE TO ali;
+GRANT CREATE VIEW TO ali;
+
+-- Avec option ADMIN
+GRANT CREATE TABLE TO ali WITH ADMIN OPTION;
 ```
 
-### **Révocation des privilèges :**
-
+#### **2. Attribution des Privilèges Objet**
 ```sql
-REVOKE CREATE TABLE FROM ali;
-REVOKE SELECT ON employees FROM ali;
+-- Attribuer plusieurs privilèges sur une table
+GRANT SELECT, INSERT, UPDATE, DELETE ON SYS.client TO ali;
+
+-- Attribuer le privilège UPDATE sur des colonnes spécifiques
+GRANT UPDATE (nom, prenom) ON SYS.client TO ali;
 ```
 
-**À retenir pour l'examen :**
-- WITH ADMIN OPTION : L'utilisateur peut accorder le privilège à d'autres
-- WITH GRANT OPTION : Même chose mais pour les privilèges objet
-- Les privilèges accordés à PUBLIC sont donnés à tous les utilisateurs
+### **C. Révocation des Privilèges**
+
+#### **1. Révocation des Privilèges Système**
+```sql
+REVOKE CREATE SESSION FROM scott;
+REVOKE ALTER ANY TABLE FROM PUBLIC;
+```
+
+#### **2. Révocation des Privilèges Objet**
+```sql
+REVOKE DELETE ON Bonus FROM scott;
+REVOKE UPDATE ON emp FROM public;
+REVOKE ALL ON bonus FROM PUBLIC;
+```
+
+### **D. Requêtes sur les Privilèges**
+```sql
+-- Afficher les privilèges système attribués
+SELECT * FROM DBA_SYS_PRIVS ORDER BY grantee, privilege;
+
+-- Afficher les privilèges objet attribués
+SELECT * FROM DBA_TAB_PRIVS WHERE grantee = 'ALI';
+
+-- Afficher les privilèges dans la session courante
+SELECT * FROM SESSION_PRIVS;
+```
 
 ---
 
-## **10. Gestion des Rôles**
+## **9. Gestion des Rôles (Roles)**
 
-### **Définition :** Un rôle est un ensemble de privilèges accordés comme une seule unité. Facilite la gestion des privilèges.
+### **A. Concept des Rôles**
+- Regroupement de privilèges pour faciliter la gestion
+- Un rôle peut contenir d'autres rôles
 
-### **Création d'un rôle :**
+### **B. Création de Rôles**
 
+#### **1. Création d'un rôle sans mot de passe**
 ```sql
-CREATE ROLE manager_role;
-GRANT CREATE TABLE, CREATE VIEW, CREATE PROCEDURE TO manager_role;
-GRANT manager_role TO ali;
+CREATE ROLE rl_etudiant;
 ```
 
-### **Rôles standards :**
-
-1. **CONNECT :** Contient seulement CREATE SESSION
-2. **RESOURCE :** Contient des privilèges de création d'objets
-3. **DBA :** Contient tous les privilèges système avec ADMIN OPTION
-
-### **Afficher les rôles :**
-
+#### **2. Création d'un rôle avec mot de passe**
 ```sql
--- Rôles accordés à un utilisateur
+CREATE ROLE rl_admin_secu IDENTIFIED BY secu_pass;
+```
+
+#### **3. Création d'un rôle externe (External Role)**
+```sql
+CREATE ROLE app_role IDENTIFIED EXTERNALLY;
+```
+
+### **C. Attribution de Privilèges aux Rôles**
+```sql
+-- Création d'un rôle et ajout de privilèges
+CREATE ROLE compta;
+GRANT SELECT, INSERT, UPDATE, DELETE ON client TO compta;
+GRANT SELECT, INSERT, UPDATE ON fournisseur TO compta;
+```
+
+### **D. Attribution de Rôles aux Utilisateurs**
+```sql
+GRANT compta TO ali;
+```
+
+### **E. Rôles Standards**
+
+#### **1. Rôle CONNECT**
+```sql
+GRANT CONNECT TO ali;
+```
+**Privilèges inclus dans CONNECT :**
+- CREATE SESSION
+
+#### **2. Rôle RESOURCE**
+```sql
+GRANT RESOURCE TO ali;
+```
+**Privilèges inclus dans RESOURCE :**
+- CREATE TABLE, CREATE SEQUENCE, CREATE PROCEDURE, etc.
+
+#### **3. Rôle DBA**
+```sql
+GRANT DBA TO ali;
+```
+**Accorde tous les privilèges système avec ADMIN OPTION**
+
+### **F. Requêtes sur les Rôles**
+```sql
+-- Afficher les rôles attribués à un utilisateur
 SELECT * FROM DBA_ROLE_PRIVS WHERE grantee = 'ALI';
 
--- Contenu d'un rôle
+-- Afficher le contenu d'un rôle spécifique
+SELECT * FROM DBA_SYS_PRIVS WHERE grantee = 'CONNECT';
 SELECT * FROM DBA_SYS_PRIVS WHERE grantee = 'RESOURCE';
+SELECT * FROM DBA_SYS_PRIVS WHERE grantee = 'DBA' ORDER BY PRIVILEGE;
+
+-- Afficher les rôles dans la session courante
+SELECT * FROM SESSION_ROLES;
+```
+
+### **G. Suppression de Rôles**
+```sql
+DROP ROLE rl_admin_secu;
 ```
 
 ---
 
-## **11. Gestion des Profils**
+## **10. Les Profils (Profiles)**
 
-### **Définition :** Un profil est un ensemble de limites sur les ressources et les mots de passe appliquées aux utilisateurs.
+### **A. Concept des Profils**
+- Pour contrôler la consommation des ressources et les mots de passe
+- Profil par défaut : DEFAULT
+- Limites de DEFAULT : UNLIMITED
 
-### **Création d'un profil :**
-
+### **B. Activation du Contrôle des Ressources**
 ```sql
-CREATE PROFILE clerk LIMIT
+-- Dans le fichier initSID.ora
+RESOURCE_LIMIT = TRUE
+
+-- Dynamiquement
+ALTER SYSTEM SET resource_limit = true;
+```
+
+### **C. Création d'un Profil**
+
+#### **1. Définition des Limites de Ressources**
+```sql
+CREATE PROFILE pf_secretaire LIMIT
 SESSIONS_PER_USER 2
-CPU_PER_SESSION 100000
-LOGICAL_READS_PER_SESSION 10000
-CONNECT_TIME 480
+CPU_PER_SESSION UNLIMITED
+CPU_PER_CALL 1000
+LOGICAL_READS_PER_SESSION UNLIMITED
+LOGICAL_READS_PER_CALL 100
 IDLE_TIME 30
+CONNECT_TIME 480;
+```
+
+#### **2. Définition des Limites de Mots de Passe**
+```sql
+CREATE PROFILE pf_admin LIMIT
+PASSWORD_LIFE_TIME 200
+PASSWORD_REUSE_MAX DEFAULT
+PASSWORD_REUSE_TIME UNLIMITED
+FAILED_LOGIN_ATTEMPTS 5
+PASSWORD_LOCK_TIME 1
+PASSWORD_GRACE_TIME 7
+CPU_PER_SESSION UNLIMITED;
+```
+
+#### **3. Exemple Complet**
+```sql
+CREATE PROFILE pf_agent LIMIT
+SESSIONS_PER_USER 2
+CPU_PER_SESSION UNLIMITED
+CPU_PER_CALL 1000
+COMPOSITE_LIMIT 20000
+PRIVATE_SGA 32K
 FAILED_LOGIN_ATTEMPTS 3
-PASSWORD_LOCK_TIME 1/24  -- Verrouillé pendant 1 heure
-PASSWORD_LIFE_TIME 90;
+PASSWORD_LIFE_TIME 90
+PASSWORD_REUSE_TIME 30
+PASSWORD_REUSE_MAX 5;
 ```
 
-### **Application du profil :**
-
+### **D. Attribution de Profil aux Utilisateurs**
 ```sql
-CREATE USER clerk_user IDENTIFIED BY password PROFILE clerk;
--- Ou
-ALTER USER existing_user PROFILE clerk;
+-- À la création
+CREATE USER rackham
+IDENTIFIED BY Ierouge
+PROFILE pf_secretaire;
+
+-- À la modification
+ALTER USER rackham PROFILE pf_agent;
 ```
 
-### **Activer les limites de ressources :**
-
+### **E. Modification et Suppression de Profils**
 ```sql
-ALTER SYSTEM SET resource_limit = TRUE;
+-- Modification d'un profil (requiert ALTER PROFILE)
+ALTER PROFILE pf_secretaire LIMIT
+SESSIONS_PER_USER 3
+IDLE_TIME 60;
+
+-- Suppression d'un profil
+DROP PROFILE pf_secretaire CASCADE;
+```
+
+### **F. Requêtes sur les Profils**
+```sql
+-- Afficher tous les profils
+SELECT profile, resource_name, limit 
+FROM dba_profiles
+ORDER BY profile, resource_name;
+
+-- Afficher un profil spécifique
+SELECT resource_name, limit 
+FROM dba_profiles
+WHERE profile = 'PF_SECRETAIRE';
 ```
 
 ---
