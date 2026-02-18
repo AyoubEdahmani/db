@@ -517,32 +517,6 @@ COMMIT;                        -- valide instructions 2,3 et éventuellement 4,5
 - **Transaction 1** : instruction 1 + COMMIT.
 - **Transaction 2** : tout ce qui suit jusqu’au prochain COMMIT (instructions 2 à 5 ou 2-3 selon le rollback).
 
-### **6.5 Exercice typique d’examen**
-
-**Énoncé :** Soit le pseudo-code suivant. Répondre aux questions.
-
-| Numéro | Instruction |
-|--------|-------------|
-| 1 | Insert into T1 values(...); |
-|   | Commit; |
-| 2 | Update T2 set col1 where ...; |
-| 3 | Delete from T1 where ...; |
-|   | Savepoint SV1; |
-| 4 | Update T1 set colTT where ...; |
-| 5 | Delete from T2 where ...; |
-|   | Si (condition est vraie) alors |
-| 6 |   Update T1 set colTT where ...; |
-|   |   Commit; |
-|   | Sinon |
-|   |   Rollback to Savepoint SV1; |
-|   | Fin Si |
-| 7 | Delete from T2 where ...; |
-
-**Question 1 :** Quelles instructions sont validées si la condition est vraie ?
-**Réponse :** 1, 2, 3, 4, 5, 6, 7 (toutes). Explication : instruction 1 validée par son propre COMMIT. Le reste forme une seconde transaction validée par le COMMIT de l’instruction 6, puis l’instruction 7 est exécutée après et validée (implicitement ou par un commit ultérieur).
-
-**Question 2 :** Nombre de transactions selon la condition ?
-**Réponse :** Dans les deux cas, 2 transactions (une avant le premier COMMIT, une après). Si condition vraie, la seconde transaction inclut 2-6, puis 7 est dans une nouvelle ? Attention : après le COMMIT en 6, la transaction est terminée. L’instruction 7 est alors dans une **troisième transaction** ? Revoir la logique. L’exercice du PDF indique 2 transactions dans les deux cas. En réalité, après le COMMIT en 6, une nouvelle transaction commence implicitement pour l’instruction 7 (car Oracle commence une transaction à la première instruction DML après un COMMIT). Donc il y aurait 3 transactions si condition vraie ? Le PDF dit 2. Il faut interpréter que l’instruction 7 est considérée comme faisant partie de la seconde transaction ? Non, après COMMIT, c’est une nouvelle. Peut-être que le COMMIT en 6 valide aussi les instructions 2-5, puis l’instruction 7 est exécutée sans COMMIT explicite, donc elle reste en attente ? L’énoncé ne précise pas de COMMIT final. Dans l’exemple du PDF, ils considèrent que l’instruction 7 est validée (sous-entendu par un commit implicite en fin de programme). Donc dans les deux cas, il y a deux transactions : la première (instruction 1) et la seconde (tout le reste). Pour la condition vraie, le reste inclut 2-7 et le COMMIT en 6 valide tout (2-6), puis 7 est après mais sans COMMIT ? C’est ambigu. Retenons l’explication du PDF.
 
 > **Conseil examen :** Bien identifier les bornes des transactions : chaque COMMIT termine la transaction en cours. Un ROLLBACK TO SAVEPOINT n’est pas un COMMIT, il annule seulement une partie.
 
