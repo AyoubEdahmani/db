@@ -608,7 +608,7 @@ DROP ROLE rl_admin_secu;
 
 ---
 
-# 🔹 Qu’est-ce qu’un **Profile** ?
+#  Qu’est-ce qu’un **Profile** ?
 
 Un **Profile** dans **Oracle Database** est un **ensemble de restrictions appliquées aux comptes utilisateurs**, par exemple :
 
@@ -620,7 +620,7 @@ Un **Profile** dans **Oracle Database** est un **ensemble de restrictions appliq
 
 ---
 
-# 🔹 Création d’un Profile
+### Création d’un Profile
 
 Exemple pratique :
 
@@ -636,7 +636,7 @@ LIMIT
 
 ---
 
-# 🔹 Explication des paramètres
+###  Explication des paramètres
 
 * `FAILED_LOGIN_ATTEMPTS` → verrouille le compte si l’utilisateur échoue trop de fois
 * `PASSWORD_LIFE_TIME` → durée avant que le mot de passe doive être changé
@@ -646,7 +646,7 @@ LIMIT
 
 ---
 
-# 🔹 Associer un Profile à un utilisateur
+### Associer un Profile à un utilisateur
 
 Après création, il faut l’appliquer à un utilisateur :
 
@@ -654,11 +654,11 @@ Après création, il faut l’appliquer à un utilisateur :
 ALTER USER ali PROFILE etudiants_profile;
 ```
 
-➡️ Maintenant, l’utilisateur `ali` sera soumis aux règles définies dans le profile.
+ Maintenant, l’utilisateur `ali` sera soumis aux règles définies dans le profile.
 
 ---
 
-✅ **Résumé simple à retenir :**
+ **Résumé simple à retenir :**
 
 * **Profile = ensemble de règles pour un compte**
 * Sert à **protéger les comptes** et **gérer les ressources**
